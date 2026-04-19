@@ -9,7 +9,9 @@ import {
   Code,
   Search,
   AlertCircle,
-  Scale
+  Scale,
+  Menu,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,11 +27,27 @@ const sections = [
 
 function App() {
   const [activeSection, setActiveSection] = useState('intro');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="app-layout">
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="hamburger"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        aria-label="Toggle menu"
+      >
+        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Overlay */}
+      <div 
+        className={`sidebar-overlay ${isMobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
         <div className="nav-logo">
           <div className="logo-icon">
             <CreditCard size={18} color="white" strokeWidth={3} />
@@ -65,7 +83,10 @@ function App() {
             <div
               key={section.id}
               className={`nav-item ${activeSection === section.id ? 'active' : ''}`}
-              onClick={() => setActiveSection(section.id)}
+              onClick={() => {
+                setActiveSection(section.id);
+                setIsMobileMenuOpen(false);
+              }}
             >
               <section.icon size={18} />
               {section.title}
