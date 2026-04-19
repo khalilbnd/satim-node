@@ -25,8 +25,19 @@ A typed, promise-based Node.js client for SATIM (Société d'Automatisation des 
 
 Install the package via your favorite package manager:
 
+**npm:**
 ```bash
 npm install satim-node-sdk
+```
+
+**Yarn:**
+```bash
+yarn add satim-node-sdk
+```
+
+**pnpm:**
+```bash
+pnpm add satim-node-sdk
 ```
 
 *Note: This library requires **Node.js 16+** and works beautifully with both TypeScript and modern JavaScript projects.*
