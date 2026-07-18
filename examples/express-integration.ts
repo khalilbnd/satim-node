@@ -1,16 +1,27 @@
 /**
- * Express.js integration example for satim-node.
+ * Express.js integration example for satim-node-sdk.
  *
- * This is a minimal example showing how to integrate SATIM payments
- * into an Express application.
- *
- * Install deps:  npm install express satim-node
+ * Install deps:  npm install express dotenv satim-node-sdk
  */
 
 import express from 'express';
-import { Satim, SatimApiError, SatimNetworkError, DZDToCentimes, OrderStatus, getLocalizedMessage } from '../src/index';
+import {
+  Satim,
+  SatimApiError,
+  SatimNetworkError,
+  DZDToCentimes,
+  OrderStatus,
+  getLocalizedMessage,
+} from '../src/index';
 
-require('dotenv').config();
+// Optional: npm install dotenv
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('dotenv').config();
+} catch {
+  // dotenv is optional for this example
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -22,9 +33,15 @@ const satim = new Satim({
   password: process.env.SATIM_PASSWORD ?? '',
   terminalId: process.env.SATIM_TERMINAL_ID ?? '',
   baseUrl: process.env.SATIM_API_URL,
-  verifySsl: process.env.SATIM_HTTP_VERIFY_SSL === 'false' ? false : true,
+  allowInsecureHttp: process.env.SATIM_ALLOW_INSECURE_HTTP === 'true',
   sandbox: process.env.NODE_ENV !== 'production',
-  debug: true,
+  logger: {
+    info: (msg, meta) => {
+      // Application-owned logging — never log payloads/credentials from the SDK.
+      // eslint-disable-next-line no-console
+      console.info('[satim]', msg, meta);
+    },
+  },
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -42,7 +59,7 @@ app.post('/checkout', async (req, res) => {
 
     const { formUrl, orderId: satimOrderId } = await satim.registerOrder({
       orderNumber: orderId,
-      amount: DZDToCentimes(amountDZD),   // convert 5000 DZD → 500000 centimes
+      amount: DZDToCentimes(amountDZD), // convert 5000 DZD → 500000 centimes
       returnUrl: `${process.env.APP_URL}/payment/success`,
       failUrl: `${process.env.APP_URL}/payment/fail`,
       description: `Order ${orderId}`,
@@ -73,7 +90,7 @@ app.get('/payment/success', async (req, res) => {
     // SATIM Sandbox Fix: Sometimes the redirect happens faster than the DB update.
     // If the status is 0 (REGISTERED), wait 2 seconds and try one more time.
     if (status.orderStatus === 0) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       status = await satim.getOrderStatus({ orderId });
     }
 
@@ -96,7 +113,7 @@ app.get('/payment/success', async (req, res) => {
       message: getLocalizedMessage(status.actionCode, lang),
       actionCode: status.actionCode,
       reason: status.actionCodeDescription,
-      raw: status.raw
+      raw: status.raw,
     });
   } catch (err) {
     handlePaymentError(err, res);
@@ -125,7 +142,7 @@ app.get('/payment/fail', async (req, res) => {
       reason: status.actionCodeDescription,
       orderStatus: status.orderStatus,
       orderId,
-      raw: status.raw
+      raw: status.raw,
     });
   } catch (err) {
     handlePaymentError(err, res);
@@ -162,7 +179,7 @@ function handlePaymentError(err: unknown, res: express.Response): void {
       error: err.errorMessage,
       message: getLocalizedMessage(err.errorCode, lang),
       code: err.errorCode,
-      raw: err.raw
+      raw: err.raw,
     });
   } else if (err instanceof SatimNetworkError) {
     res.status(502).json({ error: 'Payment gateway unreachable', details: err.message });

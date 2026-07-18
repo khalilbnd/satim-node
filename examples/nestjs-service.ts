@@ -5,8 +5,19 @@
  * wherever you need to process payments.
  */
 
-import { Injectable, Module, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
-import { Satim, SatimApiError, SatimNetworkError, DZDToCentimes, OrderStatusResponse } from 'satim-node';
+import {
+  Injectable,
+  Module,
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import {
+  Satim,
+  SatimApiError,
+  SatimNetworkError,
+  DZDToCentimes,
+  OrderStatusResponse,
+} from 'satim-node-sdk';
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 
@@ -16,20 +27,23 @@ export class SatimService {
 
   constructor() {
     this.satim = new Satim({
-      username:   process.env.SATIM_USERNAME   ?? '',
-      password:   process.env.SATIM_PASSWORD   ?? '',
-      terminalId: process.env.SATIM_TERMINAL   ?? '',
-      sandbox:    process.env.NODE_ENV !== 'production',
+      username: process.env.SATIM_USERNAME ?? '',
+      password: process.env.SATIM_PASSWORD ?? '',
+      terminalId: process.env.SATIM_TERMINAL ?? '',
+      sandbox: process.env.NODE_ENV !== 'production',
     });
   }
 
-  async initiatePayment(orderNumber: string, amountDZD: number): Promise<{ orderId: string; formUrl: string }> {
+  async initiatePayment(
+    orderNumber: string,
+    amountDZD: number
+  ): Promise<{ orderId: string; formUrl: string }> {
     try {
       return await this.satim.registerOrder({
         orderNumber,
-        amount:      DZDToCentimes(amountDZD),
-        returnUrl:   `${process.env.APP_URL}/payment/callback`,
-        failUrl:     `${process.env.APP_URL}/payment/fail`,
+        amount: DZDToCentimes(amountDZD),
+        returnUrl: `${process.env.APP_URL}/payment/callback`,
+        failUrl: `${process.env.APP_URL}/payment/fail`,
         description: `Order ${orderNumber}`,
       });
     } catch (err) {
@@ -69,6 +83,6 @@ export class SatimService {
 
 @Module({
   providers: [SatimService],
-  exports:   [SatimService],
+  exports: [SatimService],
 })
 export class SatimModule {}

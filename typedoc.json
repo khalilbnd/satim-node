@@ -1,0 +1,12 @@
+{
+  "name": "satim-node-sdk",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/api",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "readme": "none",
+  "includeVersion": true,
+  "validation": {
+    "notExported": false
+  }
+}

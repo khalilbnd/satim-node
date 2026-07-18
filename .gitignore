@@ -1,4 +1,25 @@
+# Dependencies
 node_modules/
 dist/
+coverage/
+docs-site/dist/
+docs-site/node_modules/
 
+# Logs / OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Env / secrets
 .env
+.env.*
+!.env.example
+
+# Tooling
+.idea/
+.vscode/
+*.tsbuildinfo
+sbom.cdx.json
+
+# Release
+.nyc_output/

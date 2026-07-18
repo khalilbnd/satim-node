@@ -1,222 +1,330 @@
 # satim-node-sdk
 
-> 🇩🇿 Node.js SDK for the **SATIM** Algerian payment gateway
+> Node.js SDK for the **SATIM** Algerian payment gateway
 
 [![npm version](https://img.shields.io/npm/v/satim-node-sdk.svg)](https://www.npmjs.com/package/satim-node-sdk)
+[![CI](https://github.com/khalilbnd/satim-node/actions/workflows/ci.yml/badge.svg)](https://github.com/khalilbnd/satim-node/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
 
-A typed, promise-based Node.js client for SATIM (Société d'Automatisation des Transactions Interbancaires et de Monétiques), the Algerian interbank payment network. This SDK provides a seamless developer experience for handling CIB and Edahabia transactions.
-
----
-
-## 🚀 Features
-
-- **Type Safety**: Full TypeScript support with comprehensive interfaces for every request and response.
-- **Extended Status API**: Uses `getOrderStatusExtended.do` for highly reliable payment verification.
-- **Built-in I18n**: Native translations for SATIM error & action codes in **English**, **Arabic**, and **French**.
-- **Intuitive Error Handling**: Catch and inspect typed `SatimError` classes.
-- **Debug Mode**: Verbose logging of all API requests and raw responses.
-- **Advanced Config**: Support for custom base URLs and SSL verification bypass (ideal for sandbox testing).
+Typed, zero-dependency (runtime) client for SATIM — Société d'Automatisation des Transactions Interbancaires et de Monétique. Supports CIB and Edahabia payment flows.
 
 ---
 
-## 📦 Installation
+## Installation
 
-Install the package via your favorite package manager:
-
-**npm:**
 ```bash
 npm install satim-node-sdk
-```
-
-**Yarn:**
-```bash
+# or
 yarn add satim-node-sdk
-```
-
-**pnpm:**
-```bash
+# or
 pnpm add satim-node-sdk
 ```
 
-*Note: This library requires **Node.js 16+** and works beautifully with both TypeScript and modern JavaScript projects.*
+**Requires Node.js 18+** (native `fetch` / `AbortController`).
 
 ---
 
-## ⚙️ Configuration
-
-Initialize the `Satim` client with your merchant credentials. These are typically provided by your bank or directly by SATIM.
+## Quick start
 
 ```ts
-import { Satim } from 'satim-node-sdk';
+import { Satim, DZDToCentimes } from 'satim-node-sdk';
 
 const satim = new Satim({
-  username:   process.env.SATIM_USERNAME!,
-  password:   process.env.SATIM_PASSWORD!,
+  username: process.env.SATIM_USERNAME!,
+  password: process.env.SATIM_PASSWORD!,
   terminalId: process.env.SATIM_TERMINAL!,
-  sandbox:    true,
-  debug:      true, // Enable logging
+  sandbox: true,
 });
+
+const { orderId, formUrl } = await satim.registerOrder({
+  orderNumber: 'INV-001',
+  amount: DZDToCentimes(1500), // 1500.00 DZD → centimes
+  returnUrl: 'https://your-site.dz/success',
+  failUrl: 'https://your-site.dz/fail',
+  description: 'Order INV-001',
+});
+
+// Redirect the customer to formUrl
 ```
-
-### Configuration Parameters
-
-| Option       | Type      | Required | Default    | Description                              |
-|--------------|-----------|----------|------------|------------------------------------------|
-| `username`   | `string`  | ✅        | —          | Merchant username from SATIM             |
-| `password`   | `string`  | ✅        | —          | Merchant password from SATIM             |
-| `terminalId` | `string`  | ✅        | —          | Terminal ID from SATIM                   |
-| `sandbox`    | `boolean` | ❌        | `false`    | Use the SATIM test environment           |
-| `baseUrl`    | `string`  | ❌        | —          | Override default API URL                 |
-| `verifySsl`  | `boolean` | ❌        | `true`     | Set to `false` if SATIM sandbox has cert issues |
-| `debug`      | `boolean` | ❌        | `false`    | Log traffic to console for debugging     |
-| `timeout`    | `number`  | ❌        | `30000`    | HTTP timeout in milliseconds             |
-
-⚠️ **Security Best Practice:** Never hardcode credentials in your source code. We recommend using `.env` files or a dedicated secrets manager.
 
 ---
 
-## 📚 API Reference
+## Authentication
 
-The core `Satim` class provides all the methods needed to interact with the gateway.
+SATIM authenticates each REST call with merchant `username`, `password`, and `terminalId` (form fields). The SDK injects these credentials on every request. **Never log or commit them.**
 
-### `registerOrder(params)`
-Initiates a payment by registering the order with SATIM and retrieving the `formUrl`.
+| Option              | Required | Default             | Description                          |
+| ------------------- | -------- | ------------------- | ------------------------------------ |
+| `username`          | yes      | —                   | Merchant username                    |
+| `password`          | yes      | —                   | Merchant password                    |
+| `terminalId`        | yes      | —                   | Terminal ID                          |
+| `sandbox`           | no       | `false`             | Use test environment                 |
+| `baseUrl`           | no       | prod/sandbox URL    | Custom API base (HTTPS required)     |
+| `allowInsecureHttp` | no       | `false`             | Allow `http://` for local mocks only |
+| `timeout`           | no       | `30000`             | Global timeout (ms)                  |
+| `timeouts`          | no       | —                   | Per-operation timeouts               |
+| `retries`           | no       | `{ maxRetries: 0 }` | Explicit retries only                |
+| `logger`            | no       | —                   | Optional metadata logger             |
+| `debug`             | no       | `false`             | **Deprecated** — no console output   |
+| `verifySsl`         | no       | `true`              | **Deprecated** — bypass ignored      |
+
+---
+
+## API
+
+### `registerOrder(params, options?)`
+
+Registers a payment and returns `{ orderId, formUrl }`.
 
 ```ts
 const { orderId, formUrl } = await satim.registerOrder({
-  orderNumber: "INV-001",
-  amount: 150000, // 1500 DZD (must be in centimes)
-  returnUrl: "https://your-site.dz/success",
-  failUrl: "https://your-site.dz/fail"
-});
-// Redirect your user to `formUrl`.
-```
-
-*(You can use the helper `import { DZDToCentimes } from 'satim-node-sdk'` to safely convert DZD to centimes!)*
-
-### `getOrderStatus(params)`
-Retrieves the full status (including card info and action codes) of an existing order.
-
-```ts
-const status = await satim.getOrderStatus({
-  orderId: "5f8a9e2b-1c4d..."
-});
-
-console.log(status.orderStatus); // e.g., 2 for AUTHORIZED
-```
-
-### `confirmOrder(params)`
-Captures a pre-authorized payment. Used only for two-step terminals.
-
-```ts
-const result = await satim.confirmOrder({
-  orderId: "5f8a9e2b-1c4d...",
-  amount: 50000 // Ensure you capture the exact pre-authorized amount
+  orderNumber: 'INV-001',
+  amount: 150000,
+  returnUrl: 'https://your-site.dz/success',
+  failUrl: 'https://your-site.dz/fail',
+  additionalParams: { force_terminal: 'ECOM' },
+  idempotencyKey: 'inv-001-attempt-1', // optional
 });
 ```
 
-### `refundOrder(params)`
-Refunds a captured order (partial or full).
+### `getOrderStatus(params, options?)`
+
+Call from your return/fail URL handler to verify payment.
 
 ```ts
-const result = await satim.refundOrder({
-  orderId: "...",
-  amount: 25000 // Amount to refund in centimes
-});
-```
-
-### `reverseOrder(params)`
-Voids an authorization before it has been captured.
-
-```ts
-const result = await satim.reverseOrder({
-  orderId: "..."
-});
-```
-
-### `isPaymentSuccessful(status)`
-A convenient helper that checks if an order status is `AUTHORIZED` (2) or `PRE_AUTHORIZED` (1).
-
-```ts
+const status = await satim.getOrderStatus({ orderId });
 if (satim.isPaymentSuccessful(status)) {
-  console.log('Payment verified successfully!');
+  // fulfill order
 }
 ```
 
----
+### `confirmOrder` / `refundOrder` / `reverseOrder`
 
-## 🌍 Internationalization (I18n)
-
-The library provides a `getLocalizedMessage()` function to translate SATIM's technical `actionCode` into human-readable messages. This is particularly useful for showing friendly errors to users.
+Two-step capture, refunds, and pre-capture voids.
 
 ```ts
-import { getLocalizedMessage } from 'satim-node-sdk';
-
-// Let's assume the user attempted a transaction and it failed.
-// Code 116 = Insufficient funds
-
-console.log(getLocalizedMessage(116, 'ar')); // "رصيد البطاقة غير كافٍ"
-console.log(getLocalizedMessage(116, 'en')); // "Insufficient card balance"
-console.log(getLocalizedMessage(116, 'fr')); // "Solde insuffisant"
+await satim.confirmOrder({ orderId, amount: 150000 });
+await satim.refundOrder({ orderId, amount: 50000 });
+await satim.reverseOrder({ orderId });
 ```
 
-*Note: The helper will fall back to French if a translation is missing or the language code is unrecognized.*
+### Webhooks / return URLs
+
+SATIM redirects the payer to your `returnUrl` / `failUrl`. There is no signed webhook payload in the classic REST flow — **always** confirm with `getOrderStatus` before fulfilling.
 
 ---
 
-## ⚠️ Error Handling
-
-All errors thrown by the SDK inherit from `SatimError`.
-
-- **`SatimApiError`**: Business errors directly from SATIM (e.g. invalid credentials, duplicate order).
-- **`SatimNetworkError`**: Connection, DNS, or timeout issues with SATIM servers.
-- **`SatimValidationError`**: Invalid inputs (e.g. negative amount) before sending the request.
+## Timeout configuration
 
 ```ts
+const satim = new Satim({
+  username,
+  password,
+  terminalId,
+  timeout: 30_000,
+  timeouts: {
+    registerOrder: 15_000,
+    confirmOrder: 20_000,
+    refund: 20_000,
+    status: 10_000,
+  },
+});
+
+// Per-request override
+await satim.getOrderStatus({ orderId }, { timeout: 5_000 });
+```
+
+Timeouts use `AbortController` under the hood.
+
+---
+
+## Logger injection
+
+The SDK **never** calls `console.*`. Inject a logger for safe metadata only:
+
+```ts
+const satim = new Satim({
+  username,
+  password,
+  terminalId,
+  logger: {
+    debug: (msg, meta) => myLogger.debug(msg, meta),
+    info: (msg, meta) => myLogger.info(msg, meta),
+    warn: (msg, meta) => myLogger.warn(msg, meta),
+    error: (msg, meta) => myLogger.error(msg, meta),
+  },
+});
+```
+
+Logged metadata may include: `endpoint`, `status`, `durationMs`, `requestId`, `operation`.  
+**Never** payloads, credentials, PANs, tokens, or signatures.
+
+---
+
+## Idempotency
+
+SATIM rejects duplicate `orderNumber` values server-side.
+
+This SDK also deduplicates **concurrent** `registerOrder` calls that share the same `idempotencyKey` (defaults to `orderNumber`):
+
+```ts
+// Double-submit safe while in-flight
+await Promise.all([
+  satim.registerOrder({ ...params, idempotencyKey: 'pay-42' }),
+  satim.registerOrder({ ...params, idempotencyKey: 'pay-42' }),
+]);
+// → a single HTTP request
+```
+
+Completed calls are not cached. Re-using an `orderNumber` after success returns a SATIM API error.
+
+---
+
+## Retries
+
+Retries are **disabled by default**. Enable only when you understand payment side effects:
+
+```ts
+new Satim({
+  username,
+  password,
+  terminalId,
+  retries: { maxRetries: 2, baseDelayMs: 200, retryOnNetworkError: true },
+});
+```
+
+Retries apply to network/timeout/5xx/rate-limit failures only — never to successful registrations. Prefer idempotency keys over blind retries for `registerOrder`.
+
+---
+
+## SSL / TLS enforcement
+
+- Default and production SATIM URLs use **HTTPS**.
+- Custom `http://` base URLs throw `SDKErrorCode.SSL_REQUIRED` unless `allowInsecureHttp: true`.
+- `verifySsl: false` is **deprecated and ignored** (certificate verification cannot be disabled).
+
+```ts
+// Local mock server only
+new Satim({
+  username,
+  password,
+  terminalId,
+  baseUrl: 'http://127.0.0.1:8080/payment/rest',
+  allowInsecureHttp: true,
+});
+```
+
+---
+
+## Error handling
+
+All errors extend `SDKError` (and legacy `SatimError`):
+
+```ts
+import {
+  SatimApiError,
+  SatimNetworkError,
+  SatimValidationError,
+  SDKErrorCode,
+} from 'satim-node-sdk';
+
 try {
   await satim.registerOrder(params);
 } catch (err) {
   if (err instanceof SatimApiError) {
-    console.log(err.errorCode); // Technical code from SATIM
-    console.log(err.raw);       // Raw API response
+    console.error(err.errorCode, err.code); // business + SDK code
+  } else if (err instanceof SatimNetworkError) {
+    if (err.code === SDKErrorCode.TIMEOUT) {
+      /* … */
+    }
+  } else if (err instanceof SatimValidationError) {
+    console.error(err.field);
   }
 }
 ```
 
----
-
-## 📋 Types & Enums
-
-The SDK exports various useful enums for TypeScript users.
-
-### `OrderStatus`
-- `0` — REGISTERED
-- `1` — PRE_AUTHORIZED
-- `2` — AUTHORIZED ✅
-- `6` — DECLINED ❌
-
-### `SatimLanguage`
-- `AR` — Arabic
-- `FR` — French (Default)
-- `EN` — English
+| Code                    | Meaning                       |
+| ----------------------- | ----------------------------- |
+| `NETWORK_ERROR`         | Transport failure             |
+| `TIMEOUT`               | AbortController timeout       |
+| `INVALID_CONFIGURATION` | Bad SDK config                |
+| `SSL_REQUIRED`          | HTTP URL without opt-in       |
+| `UNAUTHORIZED`          | HTTP 401/403 or access denied |
+| `RATE_LIMIT`            | HTTP 429                      |
+| `INVALID_RESPONSE`      | Malformed JSON                |
+| `VALIDATION_ERROR`      | Bad input params              |
+| `API_ERROR`             | SATIM business error          |
+| `UNKNOWN`               | Fallback                      |
 
 ---
 
-## 👨‍⚖️ Legal Notice
+## Security recommendations
 
-**Disclaimer:** This package is an **unofficial** open-source SDK. It is NOT affiliated with, authorized, or endorsed by SATIM (Société d'Automatisation des Transactions Interbancaires et de Monétique).
-
-To use this library in production, you MUST:
-1. Have an official merchant account with an Algerian bank.
-2. Have received your technical credentials (User, Password, Terminal ID) directly from SATIM or your bank.
-3. Observe all Algerian financial regulations and SATIM's service agreements.
-
-This library is a thin wrapper around APIs publicly documented by SATIM. Use of this library is at your own risk.
+1. Store credentials in a secrets manager / env vars — never in source.
+2. Keep `allowInsecureHttp` off in production.
+3. Do not log `formUrl` query strings if they contain sensitive tokens.
+4. Always verify payment with `getOrderStatus` before fulfillment.
+5. Sanitize any merchant-defined `additionalParams` (the SDK already blocks prototype pollution).
+6. See [SECURITY.md](./SECURITY.md) and [docs/SUPPLY_CHAIN.md](./docs/SUPPLY_CHAIN.md).
 
 ---
 
-## 📄 License
+## Migration guide (1.1 → 1.2)
+
+1. Upgrade to **Node.js 18+**.
+2. Remove unused `axios` / `qs` if you only needed them for this SDK.
+3. Replace `debug: true` with an injected `logger`.
+4. If you used `verifySsl: false`, configure trusted CAs instead.
+5. If you used an `http://` mock `baseUrl`, set `allowInsecureHttp: true`.
+6. Prefer catching `SDKError` / checking `err.code` for programmatic handling.
+
+Full details: [CHANGELOG.md](./CHANGELOG.md).
+
+---
+
+## Internationalization
+
+```ts
+import { getLocalizedMessage } from 'satim-node-sdk';
+
+getLocalizedMessage(116, 'ar'); // رصيد البطاقة غير كافٍ
+getLocalizedMessage(116, 'en'); // Insufficient card balance
+getLocalizedMessage(116, 'fr'); // Solde insuffisant
+```
+
+---
+
+## API documentation
+
+Generate TypeDoc HTML:
+
+```bash
+npm run docs
+```
+
+Output: `docs/api/`.
+
+---
+
+## Examples
+
+- [`examples/express-integration.ts`](./examples/express-integration.ts)
+- [`examples/nestjs-service.ts`](./examples/nestjs-service.ts)
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md). PRs require lint, typecheck, tests, and ≥90% coverage.
+
+---
+
+## Legal notice
+
+This package is an **unofficial** open-source SDK. It is not affiliated with or endorsed by SATIM. You must hold a valid merchant agreement and credentials. Use at your own risk.
+
+## License
 
 [MIT](LICENSE)

@@ -1,0 +1,6 @@
+# Code Owners for satim-node-sdk
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+*       @khalilbnd
+src/    @khalilbnd
+.github/ @khalilbnd

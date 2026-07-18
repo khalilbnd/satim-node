@@ -1,11 +1,18 @@
-export { Satim } from './satim';
+/**
+ * satim-node-sdk — public API barrel.
+ *
+ * Implementation lives under dedicated modules; this file only re-exports
+ * the supported surface for consumers.
+ */
 
-// Types
-export {
+export { Satim } from './client';
+
+export type {
   SatimConfig,
-  SatimCurrency,
-  SatimLanguage,
-  OrderStatus,
+  SatimLogger,
+  OperationTimeouts,
+  RetryConfig,
+  RequestOptions,
   RegisterOrderParams,
   RegisterOrderResponse,
   GetOrderStatusParams,
@@ -20,15 +27,21 @@ export {
   SatimRawResponse,
 } from './types';
 
-// Exceptions
+export { SatimCurrency, SatimLanguage, OrderStatus } from './types';
+
 export {
+  SDKError,
+  SDKErrorCode,
   SatimError,
   SatimApiError,
   SatimNetworkError,
   SatimConfigError,
   SatimValidationError,
-} from './exceptions';
+} from './errors';
 
-// Utilities
-export { centimesToDZD, DZDToCentimes } from './utils';
-export { getLocalizedMessage } from './utils/translations';
+export type { SDKErrorOptions } from './errors';
+
+export { centimesToDZD, DZDToCentimes, getLocalizedMessage } from './utils';
+
+/** @internal Re-exported for advanced consumers / tests — prefer public helpers above. */
+export { sanitizeObject, sanitizeStringRecord } from './security';

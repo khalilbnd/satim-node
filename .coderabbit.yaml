@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+reviews:
+  profile: assertive
+  request_changes_workflow: true
+  high_level_summary: true
+  auto_title_placeholder: true
+  path_filters:
+    - '!docs-site/**'
+    - '!**/dist/**'
+  path_instructions:
+    - path: src/security/**
+      instructions: >
+        Prioritize prototype pollution, credential leakage, TLS enforcement,
+        and sanitization bypasses.
+    - path: src/http/**
+      instructions: >
+        Ensure no payloads/credentials are logged; timeouts and retries must
+        be explicit and safe.
+    - path: __tests__/**
+      instructions: Keep coverage high; prefer regression tests for security fixes.
+chat:
+  auto_reply: true

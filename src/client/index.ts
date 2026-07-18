@@ -1,0 +1,1 @@
+export { Satim } from './satim';
