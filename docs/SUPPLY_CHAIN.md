@@ -4,8 +4,12 @@ This document describes how `satim-node-sdk` protects consumers against compromi
 
 ## npm provenance
 
-Published packages are built in GitHub Actions and published with
-[`publishConfig.provenance`](https://docs.npmjs.com/generating-provenance-statements).
+Published packages from **GitHub Actions** (`.github/workflows/release.yml`) set
+`NPM_CONFIG_PROVENANCE=true` so attestations are generated in CI.
+
+Local `npm publish` does **not** support automatic provenance (`provider: null`).
+Do not set `"provenance": true` in `package.json` `publishConfig` if you also
+publish from a laptop — that flag breaks local publishes.
 
 Consumers can verify:
 
